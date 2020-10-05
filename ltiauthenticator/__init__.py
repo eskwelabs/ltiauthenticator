@@ -1,4 +1,5 @@
 import time
+import os
 
 from traitlets import Dict
 from tornado import gen, web
@@ -144,12 +145,18 @@ class LTIAuthenticator(Authenticator):
 
         launch_url = protocol + "://" + handler.request.host + handler.request.uri
 
+        # As x-forwarded-proto is not being passed as a header from our
+        # ELB to the kubernetes cluster, give an option to overwrite with
+        # an environment variable
+        if os.getenv('HUB_URL'):
+            launch_url = os.getenv('HUB_URL') + handler.request.uri
+
         if validator.validate_launch_request(
                 launch_url,
                 handler.request.headers,
                 args
         ):
-            # Before we return lti_user_id, check to see if a canvas_custom_user_id was sent. 
+            # Before we return lti_user_id, check to see if a canvas_custom_user_id was sent.
             # If so, this indicates two things:
             # 1. The request was sent from Canvas, not edX
             # 2. The request was sent from a Canvas course not running in anonymous mode
